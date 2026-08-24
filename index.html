@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Buscador de Palavras</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Buscador de Palavras</h1>
+        
+        <div id="status-carregamento" class="contador">Carregando dicionário... Aguarde.</div>
+
+        <div id="busca-container" style="display: none;">
+            <div class="form-grupo">
+                <input type="text" id="input-letras" placeholder="Ex: CAOVALO" maxlength="7" autocomplete="off">
+                <button id="btn-buscar" onclick="buscarPalavras()">Buscar</button>
+            </div>
+            <div id="contador-resultados" class="contador"></div>
+            <ul id="lista-resultados"></ul>
+        </div>
+    </div>
+
+    <!-- Script embutido ou em arquivo separado para processar a busca -->
+    <script>
+        let listaPalavras = [];
+
+        // =====================================================================
+        // 📂 EDIÇÃO DO ARQUIVO: Altere o nome/caminho do arquivo .txt aqui embaixo
+        // =====================================================================
+        const NOME_DO_ARQUIVO = "palavras.txt"; // <--- Mude aqui se necessário
+
+        function removerAcentos(texto) {
+            return texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        }
+
+        // Carrega o arquivo txt automaticamente quando a página abre
+        async function carregarDicionario() {
+            try {
+                const resposta = await fetch(NOME_DO_ARQUIVO);
+                if (!resposta.ok) throw new Error("Arquivo não encontrado");
+                
+                const texto = await resposta.text();
+                const linhas = texto.split('\n');
+
+                for (let linha of linhas) {
+                    const original = linha.trim();
+                    if (original) {
+                        const limpa = removerAcentos(original).toLowerCase();
+                        listaPalavras.push({
+                            original: original,
+                            limpa: limpa,
+                            contador: criarContador(limpa)
+                        });
+                    }
+                }
+
+                document.getElementById('status-carregamento').style.display = 'none';
+                document.getElementById('busca-container').style.display = 'block';
+                document.getElementById('input-letras').focus();
+            } catch (erro) {
+                document.getElementById('status-carregamento').innerText = 
+                    "Erro ao carregar o arquivo. Certifique-se de que o site está rodando em um servidor local ou GitHub Pages e que o arquivo 'palavras.txt' está na pasta.";
+                console.error(erro);
+            }
+        }
+
+        function criarContador(palavra) {
+            const contador = {};
+            for (let char of palavra) {
+                contador[char] = (contador[char] || 0) + 1;
+            }
+            return contador;
+        }
+
+        function criarContadorTexto(texto) {
+            const contador = {};
+            for (let char of texto) {
+                contador[char] = (contador[char] || 0) + 1;
+            }
+            return contador;
+        }
+
+        function buscarPalavras() {
+            const inputVal = document.getElementById('input-letras').value.trim();
+            const listaUl = document.getElementById('lista-resultados');
+            const divContador = document.getElementById('contador-resultados');
+            
+            listaUl.innerHTML = '';
+            divContador.innerHTML = '';
+
+            if (!inputVal) return;
+
+            const entradaLimpa = removerAcentos(inputVal).toLowerCase();
+            const letrasUsuarioContador = criarContadorTexto(entradaLimpa);
+
+            const resultados = [];
+
+            for (let item of listaPalavras) {
+                if (item.limpa.length <= entradaLimpa.length) {
+                    let possivel = true;
+                    for (let letra in item.contador) {
+                        if (item.contador[letra] > (letrasUsuarioContador[letra] || 0)) {
+                            possivel = false;
+                            break;
+                        }
+                    }
+                    if (possivel) {
+                        resultados.push(item.original);
+                    }
+                }
+            }
+
+            // Ordena do maior para o menor tamanho
+            resultados.sort((a, b) => b.length - a.length);
+
+            divContador.innerHTML = `Encontradas <strong>${resultados.length}</strong> palavras.`;
+            
+            for (let palavra of resultados) {
+                const li = document.createElement('li');
+                li.textContent = palavra;
+                listaUl.appendChild(li);
+            }
+        }
+
+        // Permite apertar "Enter" para buscar
+        document.addEventListener("DOMContentLoaded", () => {
+            carregarDicionario();
+            document.getElementById('input-letras').addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') {
+                    buscarPalavras();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
