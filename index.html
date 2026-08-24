@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Versão 3.0 -->
+<!-- Versão 4.0 -->
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -69,13 +69,16 @@
                 <input type="text" id="input-letras" placeholder="EX: VAIAS (Letras disponíveis)" maxlength="7" autocomplete="off">
             </div>
 
-            <!-- 2. Painel de Busca Avançada -->
+            <!-- 2. Painel de Busca Avançada (3 a 7 letras + Sem Fixo) -->
             <div class="painel-avancado">
                 <div class="tamanho-seletor">
-                    <span><strong>Tamanho exato:</strong></span>
-                    <button class="filtro-btn ativo" onclick="selecionarTamanho(3)">3</button>
+                    <span><strong>Tamanho:</strong></span>
+                    <button class="filtro-btn" onclick="selecionarTamanho(3)">3</button>
                     <button class="filtro-btn" onclick="selecionarTamanho(4)">4</button>
-                    <button class="filtro-btn" onclick="filtrarTamanhoTodas()" style="background-color: #6c757d; color: white; margin-left: 10px;">Sem tamanho fixo</button>
+                    <button class="filtro-btn" onclick="selecionarTamanho(5)">5</button>
+                    <button class="filtro-btn" onclick="selecionarTamanho(6)">6</button>
+                    <button class="filtro-btn" onclick="selecionarTamanho(7)">7</button>
+                    <button class="filtro-btn" id="btn-sem-fixo" onclick="filtrarTamanhoTodas()" style="background-color: #6c757d; color: white; margin-left: 5px;">Sem tamanho fixo</button>
                 </div>
 
                 <div id="secao-posicoes" style="display: none;">
@@ -153,8 +156,8 @@
         function selecionarTamanho(tamanho) {
             tamanhoSelecionado = tamanho;
 
-            // Atualiza botões visuais
-            const botoes = document.querySelectorAll('.filtro-btn');
+            // Atualiza botões visuais (3 a 7)
+            const botoes = document.querySelectorAll('.tamanho-seletor .filtro-btn');
             botoes.forEach(b => {
                 if(b.textContent == tamanho) {
                     b.classList.add('ativo');
@@ -166,6 +169,10 @@
                     b.style.color = '#333';
                 }
             });
+
+            // Reseta estilo do botão "Sem tamanho fixo"
+            document.getElementById('btn-sem-fixo').style.backgroundColor = '#6c757d';
+            document.getElementById('btn-sem-fixo').style.color = 'white';
 
             // Mostra a seção de posições e gera N caixas de texto
             document.getElementById('secao-posicoes').style.display = 'block';
@@ -192,21 +199,18 @@
             tamanhoSelecionado = null;
             document.getElementById('secao-posicoes').style.display = 'none';
             
-            // Reseta estilo dos botões de tamanho
-            const botoes = document.querySelectorAll('.filtro-btn');
+            // Reseta estilo dos botões de 3 a 7
+            const botoes = document.querySelectorAll('.tamanho-seletor .filtro-btn');
             botoes.forEach(b => {
                 if(b.textContent !== 'Sem tamanho fixo') {
+                    b.classList.remove('ativo');
                     b.style.backgroundColor = '#e0e0e0';
                     b.style.color = '#333';
                 }
             });
-        }
 
-        function moverFoco(atual, proximoId) {
-            if (atual.value.length >= 1) {
-                const proximo = document.getElementById(proximoId);
-                if (proximo) proximo.focus();
-            }
+            // Destaca o botão "Sem tamanho fixo"
+            document.getElementById('btn-sem-fixo').style.backgroundColor = '#28a745';
         }
 
         function executarBusca() {
