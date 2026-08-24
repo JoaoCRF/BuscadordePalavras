@@ -1,82 +1,93 @@
 <!DOCTYPE html>
+<!-- Versão 3.0 -->
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Buscador Avançado de Palavras</title>
+    <title>Buscador de Palavras Avançado</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        /* Estilos adicionais específicos para a nova função de posição */
-        .posicoes-container {
+        .painel-avancado {
+            background: #fff;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+            margin-bottom: 20px;
+        }
+        .tamanho-seletor {
             display: flex;
             gap: 5px;
             justify-content: center;
             margin-bottom: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .posicoes-container {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin-bottom: 10px;
             flex-wrap: wrap;
         }
         .input-posicao {
-            width: 30px;
-            height: 30px;
+            width: 35px;
+            height: 35px;
             text-align: center;
-            font-size: 18px;
+            font-size: 20px;
+            font-weight: bold;
             text-transform: uppercase;
-            border: 2px solid #ccc;
+            border: 2px solid #007BFF;
             border-radius: 4px;
+            background-color: #f8f9fa;
         }
         .input-posicao:focus {
-            border-color: #007BFF;
+            background-color: #fff;
             outline: none;
+            box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
         }
-        .instrucao {
-            font-size: 0.9em;
-            color: #666;
+        .instrucao-casas {
             text-align: center;
-            margin-bottom: 5px;
+            font-size: 14px;
+            color: #555;
+            margin-bottom: 10px;
         }
-        /* Destaque para o input principal */
         #input-letras {
             font-weight: bold;
-            letter-spacing: 2px;
+            letter-spacing: 1px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Buscador Avançado</h1>
+        <h1>Buscador de Palavras</h1>
         
         <div id="status-carregamento" class="contador">Carregando dicionário... Aguarde.</div>
 
         <div id="busca-container" style="display: none;">
             
-            <!-- Área de Entrada de Letras (Igual antes) -->
+            <!-- 1. Entrada de Letras Disponíveis -->
             <div class="form-grupo">
                 <input type="text" id="input-letras" placeholder="EX: VAIAS (Letras disponíveis)" maxlength="7" autocomplete="off">
             </div>
 
-            <!-- Nova Área de Posicionamento (Opcional) -->
-            <div class="instrucao">Opcional: Digite as letras nas posições exatas (ex: _ A _ _ _)</div>
-            <div class="posicoes-container">
-                <input type="text" class="input-posicao" maxlength="1" oninput="moverFoco(this)" id="pos0">
-                <input type="text" class="input-posicao" maxlength="1" oninput="moverFoco(this)" id="pos1">
-                <input type="text" class="input-posicao" maxlength="1" oninput="moverFoco(this)" id="pos2">
-                <input type="text" class="input-posicao" maxlength="1" oninput="moverFoco(this)" id="pos3">
-                <input type="text" class="input-posicao" maxlength="1" oninput="moverFoco(this)" id="pos4">
-                <input type="text" class="input-posicao" maxlength="1" oninput="moverFoco(this)" id="pos5">
-                <input type="text" class="input-posicao" maxlength="1" oninput="moverFoco(this)" id="pos6">
+            <!-- 2. Painel de Busca Avançada -->
+            <div class="painel-avancado">
+                <div class="tamanho-seletor">
+                    <span><strong>Tamanho exato:</strong></span>
+                    <button class="filtro-btn ativo" onclick="selecionarTamanho(3)">3</button>
+                    <button class="filtro-btn" onclick="selecionarTamanho(4)">4</button>
+                    <button class="filtro-btn" onclick="filtrarTamanhoTodas()" style="background-color: #6c757d; color: white; margin-left: 10px;">Sem tamanho fixo</button>
+                </div>
+
+                <div id="secao-posicoes" style="display: none;">
+                    <div class="instrucao-casas">Preencha as letras nas posições desejadas (deixe em branco o que não importar):</div>
+                    <div id="posicoes-container" class="posicoes-container">
+                        <!-- As caixinhas dinâmicas aparecem aqui -->
+                    </div>
+                </div>
             </div>
 
             <div class="form-grupo">
                 <button id="btn-buscar" onclick="executarBusca()">Buscar</button>
-            </div>
-
-            <!-- Filtros de Tamanho (Igual antes) -->
-            <div id="filtros-tamanho" class="filtros-container" style="display: none;">
-                <span>Filtrar tamanho:</span>
-                <button class="filtro-btn ativo" onclick="filtrarTamanho('todas', this)">Todas</button>
-                <button class="filtro-btn" onclick="filtrarTamanho(3, this)">3</button>
-                <button class="filtro-btn" onclick="filtrarTamanho(4, this)">4</button>
-                <button class="filtro-btn" onclick="filtrarTamanho(5, this)">5</button>
-                <button class="filtro-btn" onclick="filtrarTamanho(6, this)">6</button>
-                <button class="filtro-btn" onclick="filtrarTamanho(7, this)">7</button>
             </div>
 
             <div id="contador-resultados" class="contador"></div>
@@ -86,8 +97,7 @@
 
     <script>
         let listaPalavras = [];
-        let resultadosAtuais = []; 
-        let tamanhoFiltroAtual = 'todas';
+        let tamanhoSelecionado = null; // null significa "sem tamanho fixo"
 
         // =====================================================================
         // 📂 EDIÇÃO DO ARQUIVO: Mantenha o nome do seu arquivo aqui
@@ -104,7 +114,6 @@
                 if (!resposta.ok) throw new Error("Arquivo não encontrado");
                 
                 const texto = await resposta.text();
-                // Divide por quebra de linha, suportando \n e \r\n
                 const linhas = texto.split(/\r?\n/);
 
                 for (let linha of linhas) {
@@ -123,9 +132,12 @@
                 document.getElementById('status-carregamento').style.display = 'none';
                 document.getElementById('busca-container').style.display = 'block';
                 document.getElementById('input-letras').focus();
+                
+                // Inicia selecionando o tamanho 3 por padrão para já abrir as caixas
+                selecionarTamanho(3);
             } catch (erro) {
                 document.getElementById('status-carregamento').innerText = 
-                    "Erro ao carregar o arquivo. Verifique se 'palavras.txt' está na pasta e o site está online.";
+                    "Erro ao carregar o arquivo. Verifique se 'palavras.txt' está na pasta.";
                 console.error(erro);
             }
         }
@@ -138,65 +150,110 @@
             return contador;
         }
 
-        // Função para mover o foco automaticamente ao digitar nas caixas de posição
-        function moverFoco(atual) {
-            if (atual.value.length >= 1) {
-                let proximo = atual.nextElementSibling;
-                if (proximo) {
-                    proximo.focus();
+        function selecionarTamanho(tamanho) {
+            tamanhoSelecionado = tamanho;
+
+            // Atualiza botões visuais
+            const botoes = document.querySelectorAll('.filtro-btn');
+            botoes.forEach(b => {
+                if(b.textContent == tamanho) {
+                    b.classList.add('ativo');
+                    b.style.backgroundColor = '#28a745';
+                    b.style.color = 'white';
+                } else if(b.textContent !== 'Sem tamanho fixo') {
+                    b.classList.remove('ativo');
+                    b.style.backgroundColor = '#e0e0e0';
+                    b.style.color = '#333';
                 }
+            });
+
+            // Mostra a seção de posições e gera N caixas de texto
+            document.getElementById('secao-posicoes').style.display = 'block';
+            const container = document.getElementById('posicoes-container');
+            container.innerHTML = '';
+
+            for (let i = 0; i < tamanho; i++) {
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.maxLength = 1;
+                input.className = 'input-posicao';
+                input.id = `pos_${i}`;
+                input.addEventListener('input', function() {
+                    if (this.value.length >= 1) {
+                        const proximo = document.getElementById(`pos_${i + 1}`);
+                        if (proximo) proximo.focus();
+                    }
+                });
+                container.appendChild(input);
             }
         }
 
-        // Função de busca principal (modificada para aceitar posições)
+        function filtrarTamanhoTodas() {
+            tamanhoSelecionado = null;
+            document.getElementById('secao-posicoes').style.display = 'none';
+            
+            // Reseta estilo dos botões de tamanho
+            const botoes = document.querySelectorAll('.filtro-btn');
+            botoes.forEach(b => {
+                if(b.textContent !== 'Sem tamanho fixo') {
+                    b.style.backgroundColor = '#e0e0e0';
+                    b.style.color = '#333';
+                }
+            });
+        }
+
+        function moverFoco(atual, proximoId) {
+            if (atual.value.length >= 1) {
+                const proximo = document.getElementById(proximoId);
+                if (proximo) proximo.focus();
+            }
+        }
+
         function executarBusca() {
             const inputLetras = document.getElementById('input-letras').value.trim();
+            const listaUl = document.getElementById('lista-resultados');
+            const divContador = document.getElementById('contador-resultados');
             
-            // Coleta as letras das posições
-            let padraoPosicoes = [];
-            let temPosicionamento = false;
-            for (let i = 0; i < 7; i++) {
-                letletra = document.getElementById(`pos${i}`).value.trim().toLowerCase();
-                padraoPosicoes[i] = letra || null;
-                if (letra) temPosicionamento = true;
-            }
+            listaUl.innerHTML = '';
+            divContador.innerHTML = '';
 
-            resultadosAtuais = [];
-            
-            // Se não digitou nada, limpa tudo
-            if (!inputLetras && !temPosicionamento) {
-                document.getElementById('filtros-tamanho').style.display = 'none';
-                exibirResultados();
+            if (!inputLetras) {
+                alert("Por favor, digite as letras de entrada!");
                 return;
             }
 
             const entradaLimpa = removerAcentos(inputLetras).toLowerCase();
-            // Conta as letras disponíveis (input principal + letras fixadas nas posições)
-            const letrasTotaisDisponiveis = entradaLimpa + padraoPosicoes.join('').replace(/null/g, '');
+            
+            // Coleta as posições fixas (se houver tamanho selecionado)
+            let posicoesFoliadas = [];
+            let letrasFixasStr = "";
+            if (tamanhoSelecionado !== null) {
+                for (let i = 0; i < tamanhoSelecionado; i++) {
+                    const val = document.getElementById(`pos_${i}`).value.trim().toLowerCase();
+                    posicoesFoliadas[i] = val || null;
+                    if (val) letrasFixasStr += val;
+                }
+            }
+
+            // O total de letras disponíveis é a entrada + as letras fixadas nas caixas
+            const letrasTotaisDisponiveis = entradaLimpa + letrasFixasStr;
             const contadorDisponiveis = criarContador(letrasTotaisDisponiveis);
 
+            const resultados = [];
+
             for (let item of listaPalavras) {
-                // 1. Filtro de Tamanho Básico (não pode ser maior que o input principal, 
-                //    e se tem posições, o tamanho deve ser exatamente o número de posições preenchidas)
-                
-                let tamanhoMinimoNecessario = 0;
-                let ultimaposiçãoPreenchida = -1;
-                for(let i=0; i<7; i++) { if(padraoPosicoes[i]) { tamanhoMinimoNecessario = i + 1; ultimaposiçãoPreenchida = i; } }
-
-                if (item.tamanho > entradaLimpa.length + (temPosicionamento ? 0 : 0)) {
-                     // Regra complexa: se tem posição fixa, o tamanho da palavra não pode exceder a lógica
+                // 1. Filtro estrito de tamanho, se selecionado
+                if (tamanhoSelecionado !== null && item.tamanho !== tamanhoSelecionado) {
+                    continue;
                 }
-                
-                // Simplificando: Se tem posição fixa, o tamanho da palavra é definido pela última posição preenchida
-                if (temPosicionamento && item.tamanho < tamanhoMinimoNecessario) continue;
-                if (!temPosicionamento && item.tamanho > entradaLimpa.length) continue;
-                if (temPosicionamento && item.tamanho > 7) continue; // Nosso limite de UI
+                // Se não tem tamanho fixo, respeita o limite máximo de letras digitadas
+                if (tamanhoSelecionado === null && item.tamanho > entradaLimpa.length) {
+                    continue;
+                }
 
-
-                // 2. Verifica Compatibilidade de Letras (incluindo as letras nas posições)
+                // 2. Verifica se a palavra pode ser formada com o estoque de letras
                 let possivel = true;
-                let contadorPalavra = { ...item.contador }; // Clona o contador
-
+                const contadorPalavra = { ...item.contador };
                 for (let letra in contadorPalavra) {
                     if (contadorPalavra[letra] > (contadorDisponiveis[letra] || 0)) {
                         possivel = false;
@@ -205,70 +262,38 @@
                 }
                 if (!possivel) continue;
 
-                // 3. Verifica restrição de Posição (se houver)
-                if (temPosicionamento) {
-                    for (let i = 0; i < 7; i++) {
-                        if (padraoPosicoes[i] && item.limpa[i] !== padraoPosicoes[i]) {
-                            possivel = false;
+                // 3. Verifica se bate exatamente com as posições fixadas
+                if (tamanhoSelecionado !== null) {
+                    let batePosicao = true;
+                    for (let i = 0; i < tamanhoSelecionado; i++) {
+                        if (posicoesFoliadas[i] !== null && item.limpa[i] !== posicoesFoliadas[i]) {
+                            batePosicao = false;
                             break;
                         }
                     }
-                    if (!possivel) continue;
+                    if (!batePosicao) continue;
                 }
 
-                // Se passou em tudo, adiciona
-                resultadosAtuais.push(item.original);
+                resultados.push(item.original);
             }
 
-            // Ordena do maior para o menor tamanho por padrão
-            resultadosAtuais.sort((a, b) => b.length - a.length);
+            // Ordena do maior para o menor tamanho (ou alfabética se for do mesmo tamanho)
+            resultados.sort((a, b) => b.length - a.length || a.localeCompare(b));
 
-            // Mostra a barra de filtros e reseta para "Todas"
-            document.getElementById('filtros-tamanho').style.display = 'flex';
-            resetarBotoesFiltro();
-            tamanhoFiltroAtual = 'todas';
-
-            exibirResultados();
-        }
-
-        function filtrarTamanho(tamanho, elementoBotao) {
-            tamanhoFiltroAtual = tamanho;
-            const botoes = document.querySelectorAll('.filtro-btn');
-            botoes.forEach(b => b.classList.remove('ativo'));
-            elementoBotao.classList.add('ativo');
-            exibirResultados();
-        }
-
-        function resetarBotoesFiltro() {
-            const botoes = document.querySelectorAll('.filtro-btn');
-            botoes.forEach((b, idx) => {
-                if (idx === 0) b.classList.add('ativo');
-                else b.classList.remove('ativo');
-            });
-        }
-
-        function exibirResultados() {
-            const listaUl = document.getElementById('lista-resultados');
-            const divContador = document.getElementById('contador-resultados');
-            listaUl.innerHTML = '';
-
-            let listaFiltrada = resultadosAtuais;
-            if (tamanhoFiltroAtual !== 'todas') {
-                listaFiltrada = resultadosAtuais.filter(p => p.length === Number(tamanhoFiltroAtual));
-            }
-
-            divContador.innerHTML = `Encontradas <strong>${listaFiltrada.length}</strong> palavras.`;
-            for (let palavra of listaFiltrada) {
+            divContador.innerHTML = `Encontradas <strong>${resultados.length}</strong> palavras.`;
+            
+            for (let palavra of resultados) {
                 const li = document.createElement('li');
                 li.textContent = palavra;
                 listaUl.appendChild(li);
             }
         }
 
-        // Adiciona suporte ao Enter e foca no input principal
         document.addEventListener("DOMContentLoaded", () => {
             carregarDicionario();
-            document.getElementById('input-letras').addEventListener('keypress', (e) => { if(e.key==='Enter') executarBusca(); });
+            document.getElementById('input-letras').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') executarBusca();
+            });
         });
     </script>
 </body>
