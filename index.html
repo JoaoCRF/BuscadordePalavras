@@ -2,24 +2,75 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Buscador de Palavras</title>
+    <title>Buscador Avançado de Palavras</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* Estilos adicionais específicos para a nova função de posição */
+        .posicoes-container {
+            display: flex;
+            gap: 5px;
+            justify-content: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        .input-posicao {
+            width: 30px;
+            height: 30px;
+            text-align: center;
+            font-size: 18px;
+            text-transform: uppercase;
+            border: 2px solid #ccc;
+            border-radius: 4px;
+        }
+        .input-posicao:focus {
+            border-color: #007BFF;
+            outline: none;
+        }
+        .instrucao {
+            font-size: 0.9em;
+            color: #666;
+            text-align: center;
+            margin-bottom: 5px;
+        }
+        /* Destaque para o input principal */
+        #input-letras {
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
-        <h1>Buscador de Palavras</h1>
+        <h1>Buscador Avançado</h1>
         
         <div id="status-carregamento" class="contador">Carregando dicionário... Aguarde.</div>
 
         <div id="busca-container" style="display: none;">
+            
+            <!-- Área de Entrada de Letras (Igual antes) -->
             <div class="form-grupo">
-                <input type="text" id="input-letras" placeholder="Ex: CAOVALO" maxlength="7" autocomplete="off">
+                <input type="text" id="input-letras" placeholder="EX: VAIAS (Letras disponíveis)" maxlength="7" autocomplete="off">
+            </div>
+
+            <!-- Nova Área de Posicionamento (Opcional) -->
+            <div class="instrucao">Opcional: Digite as letras nas posições exatas (ex: _ A _ _ _)</div>
+            <div class="posicoes-container">
+                <input type="text" class="input-posicao" maxlength="1" oninput="moverFoco(this)" id="pos0">
+                <input type="text" class="input-posicao" maxlength="1" oninput="moverFoco(this)" id="pos1">
+                <input type="text" class="input-posicao" maxlength="1" oninput="moverFoco(this)" id="pos2">
+                <input type="text" class="input-posicao" maxlength="1" oninput="moverFoco(this)" id="pos3">
+                <input type="text" class="input-posicao" maxlength="1" oninput="moverFoco(this)" id="pos4">
+                <input type="text" class="input-posicao" maxlength="1" oninput="moverFoco(this)" id="pos5">
+                <input type="text" class="input-posicao" maxlength="1" oninput="moverFoco(this)" id="pos6">
+            </div>
+
+            <div class="form-grupo">
                 <button id="btn-buscar" onclick="executarBusca()">Buscar</button>
             </div>
 
-            <!-- Filtros de Quantidade de Letras -->
+            <!-- Filtros de Tamanho (Igual antes) -->
             <div id="filtros-tamanho" class="filtros-container" style="display: none;">
-                <span>Filtrar por tamanho:</span>
+                <span>Filtrar tamanho:</span>
                 <button class="filtro-btn ativo" onclick="filtrarTamanho('todas', this)">Todas</button>
                 <button class="filtro-btn" onclick="filtrarTamanho(3, this)">3</button>
                 <button class="filtro-btn" onclick="filtrarTamanho(4, this)">4</button>
@@ -35,13 +86,13 @@
 
     <script>
         let listaPalavras = [];
-        let resultadosAtuais = []; // Armazena os resultados da última busca
+        let resultadosAtuais = []; 
         let tamanhoFiltroAtual = 'todas';
 
         // =====================================================================
-        // 📂 EDIÇÃO DO ARQUIVO: Altere o nome/caminho do arquivo .txt aqui embaixo
+        // 📂 EDIÇÃO DO ARQUIVO: Mantenha o nome do seu arquivo aqui
         // =====================================================================
-        const NOME_DO_ARQUIVO = "palavras.txt"; // <--- Mude aqui se necessário
+        const NOME_DO_ARQUIVO = "palavras.txt"; 
 
         function removerAcentos(texto) {
             return texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -53,7 +104,8 @@
                 if (!resposta.ok) throw new Error("Arquivo não encontrado");
                 
                 const texto = await resposta.text();
-                const linhas = texto.split('\n');
+                // Divide por quebra de linha, suportando \n e \r\n
+                const linhas = texto.split(/\r?\n/);
 
                 for (let linha of linhas) {
                     const original = linha.trim();
@@ -62,7 +114,8 @@
                         listaPalavras.push({
                             original: original,
                             limpa: limpa,
-                            contador: criarContador(limpa)
+                            contador: criarContador(limpa),
+                            tamanho: limpa.length
                         });
                     }
                 }
@@ -72,7 +125,7 @@
                 document.getElementById('input-letras').focus();
             } catch (erro) {
                 document.getElementById('status-carregamento').innerText = 
-                    "Erro ao carregar o arquivo. Verifique se o arquivo 'palavras.txt' está na pasta.";
+                    "Erro ao carregar o arquivo. Verifique se 'palavras.txt' está na pasta e o site está online.";
                 console.error(erro);
             }
         }
@@ -85,46 +138,92 @@
             return contador;
         }
 
-        function criarContadorTexto(texto) {
-            const contador = {};
-            for (let char of texto) {
-                contador[char] = (contador[char] || 0) + 1;
+        // Função para mover o foco automaticamente ao digitar nas caixas de posição
+        function moverFoco(atual) {
+            if (atual.value.length >= 1) {
+                let proximo = atual.nextElementSibling;
+                if (proximo) {
+                    proximo.focus();
+                }
             }
-            return contador;
         }
 
+        // Função de busca principal (modificada para aceitar posições)
         function executarBusca() {
-            const inputVal = document.getElementById('input-letras').value.trim();
+            const inputLetras = document.getElementById('input-letras').value.trim();
             
+            // Coleta as letras das posições
+            let padraoPosicoes = [];
+            let temPosicionamento = false;
+            for (let i = 0; i < 7; i++) {
+                letletra = document.getElementById(`pos${i}`).value.trim().toLowerCase();
+                padraoPosicoes[i] = letra || null;
+                if (letra) temPosicionamento = true;
+            }
+
             resultadosAtuais = [];
-            if (!inputVal) {
+            
+            // Se não digitou nada, limpa tudo
+            if (!inputLetras && !temPosicionamento) {
                 document.getElementById('filtros-tamanho').style.display = 'none';
                 exibirResultados();
                 return;
             }
 
-            const entradaLimpa = removerAcentos(inputVal).toLowerCase();
-            const letrasUsuarioContador = criarContadorTexto(entradaLimpa);
+            const entradaLimpa = removerAcentos(inputLetras).toLowerCase();
+            // Conta as letras disponíveis (input principal + letras fixadas nas posições)
+            const letrasTotaisDisponiveis = entradaLimpa + padraoPosicoes.join('').replace(/null/g, '');
+            const contadorDisponiveis = criarContador(letrasTotaisDisponiveis);
 
             for (let item of listaPalavras) {
-                if (item.limpa.length <= entradaLimpa.length) {
-                    let possivel = true;
-                    for (let letra in item.contador) {
-                        if (item.contador[letra] > (letrasUsuarioContador[letra] || 0)) {
+                // 1. Filtro de Tamanho Básico (não pode ser maior que o input principal, 
+                //    e se tem posições, o tamanho deve ser exatamente o número de posições preenchidas)
+                
+                let tamanhoMinimoNecessario = 0;
+                let ultimaposiçãoPreenchida = -1;
+                for(let i=0; i<7; i++) { if(padraoPosicoes[i]) { tamanhoMinimoNecessario = i + 1; ultimaposiçãoPreenchida = i; } }
+
+                if (item.tamanho > entradaLimpa.length + (temPosicionamento ? 0 : 0)) {
+                     // Regra complexa: se tem posição fixa, o tamanho da palavra não pode exceder a lógica
+                }
+                
+                // Simplificando: Se tem posição fixa, o tamanho da palavra é definido pela última posição preenchida
+                if (temPosicionamento && item.tamanho < tamanhoMinimoNecessario) continue;
+                if (!temPosicionamento && item.tamanho > entradaLimpa.length) continue;
+                if (temPosicionamento && item.tamanho > 7) continue; // Nosso limite de UI
+
+
+                // 2. Verifica Compatibilidade de Letras (incluindo as letras nas posições)
+                let possivel = true;
+                let contadorPalavra = { ...item.contador }; // Clona o contador
+
+                for (let letra in contadorPalavra) {
+                    if (contadorPalavra[letra] > (contadorDisponiveis[letra] || 0)) {
+                        possivel = false;
+                        break;
+                    }
+                }
+                if (!possivel) continue;
+
+                // 3. Verifica restrição de Posição (se houver)
+                if (temPosicionamento) {
+                    for (let i = 0; i < 7; i++) {
+                        if (padraoPosicoes[i] && item.limpa[i] !== padraoPosicoes[i]) {
                             possivel = false;
                             break;
                         }
                     }
-                    if (possivel) {
-                        resultadosAtuais.push(item.original);
-                    }
+                    if (!possivel) continue;
                 }
+
+                // Se passou em tudo, adiciona
+                resultadosAtuais.push(item.original);
             }
 
             // Ordena do maior para o menor tamanho por padrão
             resultadosAtuais.sort((a, b) => b.length - a.length);
 
-            // Mostra a barra de filtros já resetada para "Todas"
+            // Mostra a barra de filtros e reseta para "Todas"
             document.getElementById('filtros-tamanho').style.display = 'flex';
             resetarBotoesFiltro();
             tamanhoFiltroAtual = 'todas';
@@ -134,12 +233,9 @@
 
         function filtrarTamanho(tamanho, elementoBotao) {
             tamanhoFiltroAtual = tamanho;
-
-            // Atualiza visual dos botões
             const botoes = document.querySelectorAll('.filtro-btn');
             botoes.forEach(b => b.classList.remove('ativo'));
             elementoBotao.classList.add('ativo');
-
             exibirResultados();
         }
 
@@ -154,17 +250,14 @@
         function exibirResultados() {
             const listaUl = document.getElementById('lista-resultados');
             const divContador = document.getElementById('contador-resultados');
-            
             listaUl.innerHTML = '';
 
-            // Aplica o filtro de tamanho se não for 'todas'
             let listaFiltrada = resultadosAtuais;
             if (tamanhoFiltroAtual !== 'todas') {
                 listaFiltrada = resultadosAtuais.filter(p => p.length === Number(tamanhoFiltroAtual));
             }
 
             divContador.innerHTML = `Encontradas <strong>${listaFiltrada.length}</strong> palavras.`;
-            
             for (let palavra of listaFiltrada) {
                 const li = document.createElement('li');
                 li.textContent = palavra;
@@ -172,13 +265,10 @@
             }
         }
 
+        // Adiciona suporte ao Enter e foca no input principal
         document.addEventListener("DOMContentLoaded", () => {
             carregarDicionario();
-            document.getElementById('input-letras').addEventListener('keypress', function (e) {
-                if (e.key === 'Enter') {
-                    executarBusca();
-                }
-            });
+            document.getElementById('input-letras').addEventListener('keypress', (e) => { if(e.key==='Enter') executarBusca(); });
         });
     </script>
 </body>
