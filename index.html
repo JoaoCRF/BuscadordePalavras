@@ -14,16 +14,29 @@
         <div id="busca-container" style="display: none;">
             <div class="form-grupo">
                 <input type="text" id="input-letras" placeholder="Ex: CAOVALO" maxlength="7" autocomplete="off">
-                <button id="btn-buscar" onclick="buscarPalavras()">Buscar</button>
+                <button id="btn-buscar" onclick="executarBusca()">Buscar</button>
             </div>
+
+            <!-- Filtros de Quantidade de Letras -->
+            <div id="filtros-tamanho" class="filtros-container" style="display: none;">
+                <span>Filtrar por tamanho:</span>
+                <button class="filtro-btn ativo" onclick="filtrarTamanho('todas', this)">Todas</button>
+                <button class="filtro-btn" onclick="filtrarTamanho(3, this)">3</button>
+                <button class="filtro-btn" onclick="filtrarTamanho(4, this)">4</button>
+                <button class="filtro-btn" onclick="filtrarTamanho(5, this)">5</button>
+                <button class="filtro-btn" onclick="filtrarTamanho(6, this)">6</button>
+                <button class="filtro-btn" onclick="filtrarTamanho(7, this)">7</button>
+            </div>
+
             <div id="contador-resultados" class="contador"></div>
             <ul id="lista-resultados"></ul>
         </div>
     </div>
 
-    <!-- Script embutido ou em arquivo separado para processar a busca -->
     <script>
         let listaPalavras = [];
+        let resultadosAtuais = []; // Armazena os resultados da última busca
+        let tamanhoFiltroAtual = 'todas';
 
         // =====================================================================
         // 📂 EDIÇÃO DO ARQUIVO: Altere o nome/caminho do arquivo .txt aqui embaixo
@@ -34,7 +47,6 @@
             return texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         }
 
-        // Carrega o arquivo txt automaticamente quando a página abre
         async function carregarDicionario() {
             try {
                 const resposta = await fetch(NOME_DO_ARQUIVO);
@@ -60,7 +72,7 @@
                 document.getElementById('input-letras').focus();
             } catch (erro) {
                 document.getElementById('status-carregamento').innerText = 
-                    "Erro ao carregar o arquivo. Certifique-se de que o site está rodando em um servidor local ou GitHub Pages e que o arquivo 'palavras.txt' está na pasta.";
+                    "Erro ao carregar o arquivo. Verifique se o arquivo 'palavras.txt' está na pasta.";
                 console.error(erro);
             }
         }
@@ -81,20 +93,18 @@
             return contador;
         }
 
-        function buscarPalavras() {
+        function executarBusca() {
             const inputVal = document.getElementById('input-letras').value.trim();
-            const listaUl = document.getElementById('lista-resultados');
-            const divContador = document.getElementById('contador-resultados');
             
-            listaUl.innerHTML = '';
-            divContador.innerHTML = '';
-
-            if (!inputVal) return;
+            resultadosAtuais = [];
+            if (!inputVal) {
+                document.getElementById('filtros-tamanho').style.display = 'none';
+                exibirResultados();
+                return;
+            }
 
             const entradaLimpa = removerAcentos(inputVal).toLowerCase();
             const letrasUsuarioContador = criarContadorTexto(entradaLimpa);
-
-            const resultados = [];
 
             for (let item of listaPalavras) {
                 if (item.limpa.length <= entradaLimpa.length) {
@@ -106,29 +116,67 @@
                         }
                     }
                     if (possivel) {
-                        resultados.push(item.original);
+                        resultadosAtuais.push(item.original);
                     }
                 }
             }
 
-            // Ordena do maior para o menor tamanho
-            resultados.sort((a, b) => b.length - a.length);
+            // Ordena do maior para o menor tamanho por padrão
+            resultadosAtuais.sort((a, b) => b.length - a.length);
 
-            divContador.innerHTML = `Encontradas <strong>${resultados.length}</strong> palavras.`;
+            // Mostra a barra de filtros já resetada para "Todas"
+            document.getElementById('filtros-tamanho').style.display = 'flex';
+            resetarBotoesFiltro();
+            tamanhoFiltroAtual = 'todas';
+
+            exibirResultados();
+        }
+
+        function filtrarTamanho(tamanho, elementoBotao) {
+            tamanhoFiltroAtual = tamanho;
+
+            // Atualiza visual dos botões
+            const botoes = document.querySelectorAll('.filtro-btn');
+            botoes.forEach(b => b.classList.remove('ativo'));
+            elementoBotao.classList.add('ativo');
+
+            exibirResultados();
+        }
+
+        function resetarBotoesFiltro() {
+            const botoes = document.querySelectorAll('.filtro-btn');
+            botoes.forEach((b, idx) => {
+                if (idx === 0) b.classList.add('ativo');
+                else b.classList.remove('ativo');
+            });
+        }
+
+        function exibirResultados() {
+            const listaUl = document.getElementById('lista-resultados');
+            const divContador = document.getElementById('contador-resultados');
             
-            for (let palavra of resultados) {
+            listaUl.innerHTML = '';
+
+            // Aplica o filtro de tamanho se não for 'todas'
+            let listaFiltrada = resultadosAtuais;
+            if (tamanhoFiltroAtual !== 'todas') {
+                listaFiltrada = resultadosAtuais.filter(p => p.length === Number(tamanhoFiltroAtual));
+            }
+
+            divContador.innerHTML = `Encontradas <strong>${listaFiltrada.length}</strong> palavras.`;
+            
+            for (let palavra of listaFiltrada) {
                 const li = document.createElement('li');
                 li.textContent = palavra;
                 listaUl.appendChild(li);
             }
         }
 
-        // Permite apertar "Enter" para buscar
         document.addEventListener("DOMContentLoaded", () => {
             carregarDicionario();
             document.getElementById('input-letras').addEventListener('keypress', function (e) {
                 if (e.key === 'Enter') {
-                    buscarPalavras();
+                    executarBusca();
                 }
             });
         });
