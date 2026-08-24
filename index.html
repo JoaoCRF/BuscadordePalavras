@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Versão 4.0 -->
+<!-- Versão 5.0 -->
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -66,7 +66,7 @@
             
             <!-- 1. Entrada de Letras Disponíveis -->
             <div class="form-grupo">
-                <input type="text" id="input-letras" placeholder="EX: VAIAS (Letras disponíveis)" maxlength="7" autocomplete="off">
+                <input type="text" id="input-letras" placeholder="EX: CALLCOU (Letras disponíveis)" maxlength="7" autocomplete="off">
             </div>
 
             <!-- 2. Painel de Busca Avançada (3 a 7 letras + Sem Fixo) -->
@@ -100,7 +100,7 @@
 
     <script>
         let listaPalavras = [];
-        let tamanhoSelecionado = null; // null significa "sem tamanho fixo"
+        let tamanhoSelecionado = null; 
 
         // =====================================================================
         // 📂 EDIÇÃO DO ARQUIVO: Mantenha o nome do seu arquivo aqui
@@ -136,7 +136,6 @@
                 document.getElementById('busca-container').style.display = 'block';
                 document.getElementById('input-letras').focus();
                 
-                // Inicia selecionando o tamanho 3 por padrão para já abrir as caixas
                 selecionarTamanho(3);
             } catch (erro) {
                 document.getElementById('status-carregamento').innerText = 
@@ -156,7 +155,6 @@
         function selecionarTamanho(tamanho) {
             tamanhoSelecionado = tamanho;
 
-            // Atualiza botões visuais (3 a 7)
             const botoes = document.querySelectorAll('.tamanho-seletor .filtro-btn');
             botoes.forEach(b => {
                 if(b.textContent == tamanho) {
@@ -170,11 +168,9 @@
                 }
             });
 
-            // Reseta estilo do botão "Sem tamanho fixo"
             document.getElementById('btn-sem-fixo').style.backgroundColor = '#6c757d';
             document.getElementById('btn-sem-fixo').style.color = 'white';
 
-            // Mostra a seção de posições e gera N caixas de texto
             document.getElementById('secao-posicoes').style.display = 'block';
             const container = document.getElementById('posicoes-container');
             container.innerHTML = '';
@@ -199,7 +195,6 @@
             tamanhoSelecionado = null;
             document.getElementById('secao-posicoes').style.display = 'none';
             
-            // Reseta estilo dos botões de 3 a 7
             const botoes = document.querySelectorAll('.tamanho-seletor .filtro-btn');
             botoes.forEach(b => {
                 if(b.textContent !== 'Sem tamanho fixo') {
@@ -209,7 +204,6 @@
                 }
             });
 
-            // Destaca o botão "Sem tamanho fixo"
             document.getElementById('btn-sem-fixo').style.backgroundColor = '#28a745';
         }
 
@@ -227,56 +221,52 @@
             }
 
             const entradaLimpa = removerAcentos(inputLetras).toLowerCase();
+            const contadorEntrada = criarContador(entradaLimpa);
             
-            // Coleta as posições fixas (se houver tamanho selecionado)
-            let posicoesFoliadas = [];
-            let letrasFixasStr = "";
+            // Coleta as posições fixas
+            let posicoesFixas = [];
             if (tamanhoSelecionado !== null) {
                 for (let i = 0; i < tamanhoSelecionado; i++) {
                     const val = document.getElementById(`pos_${i}`).value.trim().toLowerCase();
-                    posicoesFoliadas[i] = val || null;
-                    if (val) letrasFixasStr += val;
+                    posicoesFixas[i] = val || null;
                 }
             }
-
-            // O total de letras disponíveis é a entrada + as letras fixadas nas caixas
-            const letrasTotaisDisponiveis = entradaLimpa + letrasFixasStr;
-            const contadorDisponiveis = criarContador(letrasTotaisDisponiveis);
 
             const resultados = [];
 
             for (let item of listaPalavras) {
-                // 1. Filtro estrito de tamanho, se selecionado
+                // 1. Filtro de tamanho
                 if (tamanhoSelecionado !== null && item.tamanho !== tamanhoSelecionado) {
                     continue;
                 }
-                // Se não tem tamanho fixo, respeita o limite máximo de letras digitadas
                 if (tamanhoSelecionado === null && item.tamanho > entradaLimpa.length) {
                     continue;
                 }
 
-                // 2. Verifica se a palavra pode ser formada com o estoque de letras
-                let possivel = true;
-                const contadorPalavra = { ...item.contador };
-                for (let letra in contadorPalavra) {
-                    if (contadorPalavra[letra] > (contadorDisponiveis[letra] || 0)) {
-                        possivel = false;
-                        break;
-                    }
-                }
-                if (!possivel) continue;
-
-                // 3. Verifica se bate exatamente com as posições fixadas
+                // 2. Se houver posições fixas, valida se a palavra cumpre a posição EXATAMENTE
                 if (tamanhoSelecionado !== null) {
                     let batePosicao = true;
                     for (let i = 0; i < tamanhoSelecionado; i++) {
-                        if (posicoesFoliadas[i] !== null && item.limpa[i] !== posicoesFoliadas[i]) {
+                        if (posicoesFixas[i] !== null && item.limpa[i] !== posicoesFixas[i]) {
                             batePosicao = false;
                             break;
                         }
                     }
                     if (!batePosicao) continue;
                 }
+
+                // 3. Validação rigorosa do estoque de letras (Entrada do usuário)
+                // Usamos o contador da entrada pura para garantir que nenhuma letra ultrapasse o limite digitado.
+                let possivel = true;
+                const contadorPalavra = item.contador; // Contador da palavra do dicionário
+
+                for (let letra in contadorPalavra) {
+                    if (contadorPalavra[letra] > (contadorEntrada[letra] || 0)) {
+                        possivel = false;
+                        break;
+                    }
+                }
+                if (!possivel) continue;
 
                 resultados.push(item.original);
             }
